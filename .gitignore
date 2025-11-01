@@ -1,0 +1,8 @@
+notes.txt
+jax_cfd.egg*
+__pycache__/
+*.pyc
+*.pyo
+.vscode/
+.ipynb_checkpoints/
+.DS_Store
