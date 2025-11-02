@@ -46,6 +46,16 @@ def aligned_array_encoder(
       bcs = tuple(
           boundaries.periodic_boundary_conditions(grid.ndim)
           for _ in range(len(inputs)))
+      
+
+    #### DEBUG ####
+    for x, offset, bc in zip(inputs, data_offsets, bcs):
+      print("ENCODER DEBUG: x.shape before slice", x.shape, "offset", offset)
+      x_s = slice_last_fn(x)
+      print("ENCODER DEBUG: after slice", x_s.shape)
+    #### END DEBUG ####
+
+
     return tuple(
         bc.impose_bc(grids.GridArray(slice_last_fn(x), offset, grid))
         for x, offset, bc in zip(inputs, data_offsets, bcs))

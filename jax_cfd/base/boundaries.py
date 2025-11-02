@@ -139,7 +139,7 @@ class ConstantBoundaryConditions(BoundaryConditions):
       raise NotImplementedError('Edge-aligned neumann BC are not implemented.')
     if size_diff < 0:
       raise ValueError(
-          'the GridArray does not contain all interior grid values.')
+          f'the GridArray does not contain all interior grid values: size_diff = {size_diff}')
     return True
 
   def _pad(
