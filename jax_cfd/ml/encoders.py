@@ -31,34 +31,36 @@ def aligned_array_encoder(
     physics_specs: physics_specifications.BasePhysicsSpecs,
     data_offsets: Optional[Tuple[Tuple[float, ...], ...]] = None,
 ) -> EncodeFn:
-  """Generates encoder that wraps last data slice as GridVariables."""
-  del dt  # unused.
+  """Generates an encoder that wraps the last data slice as GridVariables."""
+  del dt  # unused
+
+  # Determine offsets for each input component
   if hasattr(physics_specs, 'combo_offsets'):
     data_offsets = physics_specs.combo_offsets()
   else:
     data_offsets = data_offsets or grid.cell_faces
-  slice_last_fn = lambda x: array_utils.slice_along_axis(x, 0, -1)
+
+  # Slice along the leading (time) axis only if an extra dimension is present.
+  # If x is a GridArray, use its .data to inspect ndim; otherwise use x itself.
+  def slice_last_fn(x):
+    arr = x.data if hasattr(x, 'data') else x
+    # Only slice when the array has one more dimension than the grid.
+    return array_utils.slice_along_axis(arr, 0, -1) if arr.ndim > grid.ndim else arr
 
   def encode_fn(inputs):
+    # Determine boundary conditions for each input component
     if hasattr(physics_specs, 'combo_boundaries'):
       bcs = physics_specs.combo_boundaries()
     else:
       bcs = tuple(
-          boundaries.periodic_boundary_conditions(grid.ndim)
-          for _ in range(len(inputs)))
-      
-
-    #### DEBUG ####
-    for x, offset, bc in zip(inputs, data_offsets, bcs):
-      print("ENCODER DEBUG: x.shape before slice", x.shape, "offset", offset)
-      x_s = slice_last_fn(x)
-      print("ENCODER DEBUG: after slice", x_s.shape)
-    #### END DEBUG ####
-
-
+        boundaries.periodic_boundary_conditions(grid.ndim)
+        for _ in range(len(inputs))
+      )
+    # Wrap each sliced input as a GridArray and impose the corresponding BC
     return tuple(
-        bc.impose_bc(grids.GridArray(slice_last_fn(x), offset, grid))
-        for x, offset, bc in zip(inputs, data_offsets, bcs))
+      bc.impose_bc(grids.GridArray(slice_last_fn(x), offset, grid))
+      for x, offset, bc in zip(inputs, data_offsets, bcs)
+    )
 
   return encode_fn
 

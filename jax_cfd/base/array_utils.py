@@ -44,7 +44,8 @@ def slice_along_axis(
     inputs: PyTree,
     axis: int,
     idx: Union[slice, int],
-    expect_same_dims: bool = True
+    expect_same_dims: bool = True,
+    keepdims: bool = False
 ) -> PyTree:
   """Returns slice of `inputs` defined by `idx` along axis `axis`.
 
@@ -65,8 +66,16 @@ def slice_along_axis(
   sliced = []
   for array in arrays:
     ndim = array.ndim
-    slc = tuple(idx if j == _normalize_axis(axis, ndim) else slice(None)
-                for j in range(ndim))
+    axis_norm = _normalize_axis(axis, ndim)
+    # if keepdims and idx is an int, build a one-element slice to preserve rank
+    if keepdims and isinstance(idx, int):
+      if idx < 0:
+        _idx = slice(idx, None)
+      else:
+        _idx = slice(idx, idx + 1)
+    else:
+      _idx = idx
+    slc = tuple(_idx if j == axis_norm else slice(None) for j in range(ndim))
     sliced.append(array[slc])
   return jax.tree.unflatten(tree_def, sliced)
 

@@ -10,6 +10,7 @@ from typing import Any, Callable, Optional
 import gin
 import haiku as hk
 import jax.numpy as jnp
+import jax # used only in tree.map, maybe replace with tree_util?
 from jax_cfd.base import array_utils
 from jax_cfd.base import grids
 from jax_cfd.base import interpolation
@@ -43,13 +44,17 @@ def aligned_array_decoder(
     grid: grids.Grid,
     dt: float,
     physics_specs: physics_specifications.BasePhysicsSpecs,
+    *,
+    return_grid: bool = False,
 ) -> DecodeFn:
-  """Generates decoder that extracts data from GridVariables."""
-  del grid, dt, physics_specs  # unused.
+  del grid, dt, physics_specs
   def decode_fn(inputs):
-    return tuple(x.data for x in inputs)
-
+    if return_grid:
+      return inputs  # preserve GridVariable leaves
+    # unwrap .data where present, pass arrays through unchanged
+    return jax.tree.map(lambda x: x.data if hasattr(x, "data") else x, inputs)
   return decode_fn
+
 
 
 @gin.register
