@@ -40,19 +40,30 @@ def identity_decoder(
 
 # TODO(dkochkov) generalize this to arbitrary pytrees.
 @gin.register
-def aligned_array_decoder(
-    grid: grids.Grid,
-    dt: float,
-    physics_specs: physics_specifications.BasePhysicsSpecs,
-    *,
-    return_grid: bool = False,
-) -> DecodeFn:
-  del grid, dt, physics_specs
+def aligned_array_decoder(grid, dt, physics_specs, *, return_grid: bool = False):
+  del dt, physics_specs
+
+  def to_gridarray(x):
+    # unwrap GridVariable -> GridArray
+    if isinstance(x, grids.GridVariable):
+      x = x.array
+    # collapse nested GridArray(data=GridArray(...))
+    while isinstance(x, grids.GridArray) and isinstance(x.data, grids.GridArray):
+      x = grids.GridArray(x.data.data, x.offset, x.grid)
+    # raw ndarray -> GridArray at ref location (cell centers here)
+    if not isinstance(x, grids.GridArray):
+      return grids.GridArray(x, grid.cell_center, grid)
+    return x
+
   def decode_fn(inputs):
     if return_grid:
-      return inputs  # preserve GridVariable leaves
-    # unwrap .data where present, pass arrays through unchanged
-    return jax.tree.map(lambda x: x.data if hasattr(x, "data") else x, inputs)
+      return inputs
+    return jax.tree_util.tree_map(
+      to_gridarray,
+      inputs,
+      is_leaf=lambda z: isinstance(z, (grids.GridArray, grids.GridVariable))
+    )
+
   return decode_fn
 
 
