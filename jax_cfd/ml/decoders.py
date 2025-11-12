@@ -50,7 +50,7 @@ def aligned_array_decoder(grid, dt, physics_specs, *, return_grid: bool = False)
     # collapse nested GridArray(data=GridArray(...))
     while isinstance(x, grids.GridArray) and isinstance(x.data, grids.GridArray):
       x = grids.GridArray(x.data.data, x.offset, x.grid)
-    # raw ndarray -> GridArray at ref location (cell centers here)
+    # raw ndarray -> GridArray at ref location (cell centers here)  
     if not isinstance(x, grids.GridArray):
       return grids.GridArray(x, grid.cell_center, grid)
     return x
